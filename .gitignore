@@ -5,3 +5,7 @@ pipeSim.sln
 Library/
 Packages/
 UserSettings/
+.DS_Store
+.vscode/
+Assembly-CSharp.csproj
+*.meta
