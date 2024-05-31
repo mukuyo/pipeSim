@@ -1,6 +1,6 @@
 using UnityEngine;
 using System.IO;
-
+using System;
 public class DepthTextureEffect : MonoBehaviour
 {
     private Camera cam;
@@ -13,6 +13,7 @@ public class DepthTextureEffect : MonoBehaviour
     private StreamWriter writer;
     private int frameCount = 0;
     private const int maxFrames = 1000;
+    private float[,] pixel_stdev;
 
     void Start()
     {
@@ -25,10 +26,46 @@ public class DepthTextureEffect : MonoBehaviour
         GameObject depthCamObj = new GameObject("DepthCamera");
         depthCam = depthCamObj.AddComponent<Camera>();
         depthCam.enabled = false; // 手動でレンダリングするため無効にする
-
-        // ファイルを開く
         writer = new StreamWriter("DepthData.txt", false);
+        LoadPixelStdDevs();
     }
+
+void LoadPixelStdDevs()
+{
+    // テキストファイルからピクセルの標準偏差を読み込む
+    string filePath = "pixel_std_devs.txt";
+    string[] lines = File.ReadAllLines(filePath);
+    int height = lines.Length;
+    int width = lines[0].Split('\t').Length;
+    pixel_stdev = new float[height, width];
+
+    for (int y = 0; y < height; y++)
+    {
+        string[] values = lines[y].Split('\t');
+        for (int x = 0; x < width; x++)
+        {
+            // 空の文字列があればスキップする
+            if (string.IsNullOrWhiteSpace(values[x]))
+            {
+                Debug.LogWarning($"Empty or whitespace value on line {y + 1}, column {x + 1}");
+                continue;
+            }
+
+            // 浮動小数点数に変換できない場合にエラーをログに記録する
+            if (!float.TryParse(values[x], out float parsedValue))
+            {
+                Debug.LogError($"Failed to parse float value on line {y + 1}, value: {values[x]}");
+                continue;
+            }
+
+            // 正常に変換された場合は、配列に格納する
+            pixel_stdev[y, x] = parsedValue;
+        }
+    }
+}
+
+
+
 
     void OnRenderImage(RenderTexture source, RenderTexture dest)
     {
@@ -40,7 +77,7 @@ public class DepthTextureEffect : MonoBehaviour
             if (depthAsColorTexture != null) depthAsColorTexture.Release();
             depthAsColorTexture = new RenderTexture(source.width, source.height, 0, RenderTextureFormat.ARGBFloat);
 
-            depthTex2D = new Texture2D(source.width, source.height, TextureFormat.RFloat, false);
+            depthTex2D = new Texture2D(source.width, source.height, TextureFormat.RGBAFloat, false);
         }
 
         // 深度用カメラを設定
@@ -78,8 +115,6 @@ public class DepthTextureEffect : MonoBehaviour
         float dist_a = 0.00039587120180480275f;
         float dist_b = 0.5424400827831032f;
 
-        float pixel_stdev = 0.028445781f;
-
         for (int y = 0; y < depthTex2D.height; y++)
         {
             for (int x = 0; x < depthTex2D.width; x++)
@@ -94,18 +129,19 @@ public class DepthTextureEffect : MonoBehaviour
 
                 float distance_stdev = dist_a * Mathf.Exp(dist_b * depthInMeters);
 
-                float dist_noise = Random.Range(-distance_stdev, distance_stdev);
-                float pixel_noise = Random.Range(-pixel_stdev, pixel_stdev);
+                float dist_noise = UnityEngine.Random.Range(-distance_stdev, distance_stdev);
+                float pixel_noise = UnityEngine.Random.Range(-pixel_stdev[y, x], pixel_stdev[y, x]);
 
-                depthInMeters = depthInMeters + dist_noise + pixel_noise;
+                depthInMeters = depthInMeters + dist_noise ;
                 depthInMeters = Mathf.Clamp(depthInMeters, 0.0f, 10.0f);
 
                 // 距離を深度値に戻す
                 depth = (f * n) / (depthInMeters * (f - n) + n);
-
+                
+                depth = 1.0f - depth;
                 // 更新した深度値をカラーとして設定
-                pixel = new Color(depth, depth, depth, 1.0f);
-                depthTex2D.SetPixel(x, y, pixel);
+                Color color = new Color(depth, depth, depth, 1.0f); // 緑色を設定
+                depthTex2D.SetPixel(x, y, color);
             }
         }
 
