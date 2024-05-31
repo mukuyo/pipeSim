@@ -74,53 +74,42 @@ public class DepthTextureEffect : MonoBehaviour
         depthTex2D.ReadPixels(new Rect(0, 0, colorTexture.width, colorTexture.height), 0, 0);
         depthTex2D.Apply();
 
-        int centerX = colorTexture.width / 2;
-        int centerY = colorTexture.height / 2;
+        // ノイズの適用
+        float dist_a = 0.00039587120180480275f;
+        float dist_b = 0.5424400827831032f;
 
-        Color centerPixel = depthTex2D.GetPixel(centerX, centerY);
-        float depth = centerPixel.r;
+        float pixel_stdev = 0.028445781;
 
-        // 深度値を実際の距離に変換
-        float n = cam.nearClipPlane;
-        float f = cam.farClipPlane;
-        float depthInMeters = (f * n) / ((f - n) * (depth - 1) + f);
-
-        // // ノイズの適用
-        // float[] distances = { 1f, 1.5f, 2f, 2.5f, 3f, 3.5f, 4f, 4.5f, 5f, 5.5f, 6f, 6.5f};
-        // float[] stdevs = {0.000581636f, 0.000698358f, 0.001016795f, 0.001582388f, 0.002193503f, 0.00314924f, 0.005200843f, 0.006372291f, 0.008387831f, 0.009203792f,0.013668662f, 0.01819264f};
-
-        // float stdev = 0;
-        // for (int j = 0; j < distances.Length; ++j)
-        // {
-        //     if (distances[j] > depthInMeters)
-        //     {
-        //         stdev = stdevs[j];
-        //         break;
-        //     }
-        // }
-        float a = 0.00069114f;
-        float b = -0.00158065f;
-        float c = 0.00163197f;
-        float stdev = a* depthInMeters * depthInMeters + b* depthInMeters + c;
-        float noise = Random.Range(-stdev, stdev);
-        depthInMeters += noise;
-        depthInMeters = Mathf.Clamp(depthInMeters, 0.0f, 10.0f);
-
-        // 距離を深度値に戻す
-        depth = (f * n) / (depthInMeters * (f - n) + n);
-
-        // 中央のピクセルの深度を出力
-        if (writer != null)
+        for (int y = 0; y < depthTex2D.height; y++)
         {
-            writer.WriteLine(depthInMeters);
-            Debug.Log("meters: " + depthInMeters + " stdev: " + stdev);
+            for (int x = 0; x < depthTex2D.width; x++)
+            {
+                Color pixel = depthTex2D.GetPixel(x, y);
+                float depth = pixel.r;
+
+                // 深度値を実際の距離に変換
+                float n = cam.nearClipPlane;
+                float f = cam.farClipPlane;
+                float depthInMeters = (f * n) / ((f - n) * (depth - 1) + f);
+
+                float distance_stdev = dist_a * Mathf.Exp(dist_b * depthInMeters);
+
+                float dist_noise = Random.Range(-distance_stdev, distance_stdev);
+                float pixel_noise = Random.Range(-pixel_stdev, pixel_stdev);
+
+                depthInMeters = depthInMeters + dist_noise + pixel_noise;
+                depthInMeters = Mathf.Clamp(depthInMeters, 0.0f, 10.0f);
+
+                // 距離を深度値に戻す
+                depth = (f * n) / (depthInMeters * (f - n) + n);
+
+                // 更新した深度値をカラーとして設定
+                pixel = new Color(depth, depth, depth, 1.0f);
+                depthTex2D.SetPixel(x, y, pixel);
+            }
         }
 
-        // 更新した深度値をカラーとして設定
-        centerPixel = new Color(depth, depth, depth, 1.0f);
-        depthTex2D.SetPixel(centerX, centerY, centerPixel);
         depthTex2D.Apply();
-
         RenderTexture.active = null;
 
         // 変換したテクスチャを再度RenderTextureにコピー

@@ -9,3 +9,5 @@ UserSettings/
 .vscode/
 Assembly-CSharp.csproj
 *.meta
+Scenes/
+Model/
