@@ -78,7 +78,7 @@ public class DepthTextureEffect : MonoBehaviour
         float dist_a = 0.00039587120180480275f;
         float dist_b = 0.5424400827831032f;
 
-        float pixel_stdev = 0.028445781;
+        float pixel_stdev = 0.028445781f;
 
         for (int y = 0; y < depthTex2D.height; y++)
         {
