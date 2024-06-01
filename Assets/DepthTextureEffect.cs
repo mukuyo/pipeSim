@@ -9,14 +9,14 @@ public class DepthTextureEffect : MonoBehaviour
     private RenderTexture depthTexture;
     private RenderTexture depthAsColorTexture;
     private Texture2D depthTex2D;
+    private RenderTexture colorTexture;
+    private Texture2D colorTex2D;
 
     // ファイルに書き込むための変数
     private StreamWriter writer;
     private int frameCount = 0;
     private const int maxFrames = 1000;
     private float[,] pixel_stdev;
-    private const int textureWidth = 640;
-    private const int textureHeight = 480;
 
     void Start()
     {
@@ -31,15 +31,6 @@ public class DepthTextureEffect : MonoBehaviour
         depthCam.enabled = false; // 手動でレンダリングするため無効にする
         writer = new StreamWriter("DepthData.txt", false);
         LoadPixelStdDevs();
-
-        Screen.SetResolution(textureWidth, textureHeight, false);
-        // カメラのアスペクト比を設定する
-        Camera.main.aspect = (float)textureWidth / textureHeight;
-
-        // 固定サイズのRenderTextureを作成
-        depthTexture = new RenderTexture(textureWidth, textureHeight, 24, RenderTextureFormat.Depth);
-        depthAsColorTexture = new RenderTexture(textureWidth, textureHeight, 0, RenderTextureFormat.ARGBFloat);
-        depthTex2D = new Texture2D(textureWidth, textureHeight, TextureFormat.RGBAFloat, false);
     }
 
     void LoadPixelStdDevs()
@@ -50,7 +41,7 @@ public class DepthTextureEffect : MonoBehaviour
         int height = lines.Length;
         int width = lines[0].Split('\t').Length - 1;
         pixel_stdev = new float[height, width];
-
+        Debug.Log(width);
         for (int y = 0; y < height; y++)
         {
             string[] values = lines[y].Split('\t');
@@ -78,6 +69,22 @@ public class DepthTextureEffect : MonoBehaviour
 
     void OnRenderImage(RenderTexture source, RenderTexture dest)
     {
+        if (depthTexture == null || depthTexture.width != source.width || depthTexture.height != source.height)
+        {
+            if (depthTexture != null) depthTexture.Release();
+            depthTexture = new RenderTexture(source.width, source.height, 24, RenderTextureFormat.Depth);
+
+            if (depthAsColorTexture != null) depthAsColorTexture.Release();
+            depthAsColorTexture = new RenderTexture(source.width, source.height, 0, RenderTextureFormat.ARGBFloat);
+
+            depthTex2D = new Texture2D(source.width, source.height, TextureFormat.RGBAFloat, false);
+
+            if (colorTexture != null) colorTexture.Release();
+            colorTexture = new RenderTexture(source.width, source.height, 0, RenderTextureFormat.ARGB32);
+
+            colorTex2D = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false);
+        }
+
         // 深度用カメラを設定
         depthCam.CopyFrom(cam);
         depthCam.targetTexture = depthTexture;
@@ -90,7 +97,10 @@ public class DepthTextureEffect : MonoBehaviour
         // 深度テクスチャにノイズ効果を適用
         ApplyNoiseEffect(depthAsColorTexture);
 
-        // 結果を白黒で画面に描画
+        // カラー画像をコピー
+        Graphics.Blit(source, colorTexture);
+
+        // 結果を画面に描画
         Graphics.Blit(depthAsColorTexture, dest);
 
         // フレームカウントを更新
@@ -112,8 +122,7 @@ public class DepthTextureEffect : MonoBehaviour
         // ノイズの適用
         float dist_a = 0.00039587120180480275f;
         float dist_b = 0.5424400827831032f;
-
-        // Debug.Log(depthTex2D.width);
+        Debug.Log(depthTex2D.width);
         for (int y = 0; y < depthTex2D.height; y++)
         {
             for (int x = 0; x < depthTex2D.width; x++)
@@ -137,8 +146,9 @@ public class DepthTextureEffect : MonoBehaviour
                 // 距離を深度値に戻す
                 depth = (f * n) / (depthInMeters * (f - n) + n);
 
+                // depth = 1.0f - depth;
                 // 更新した深度値をカラーとして設定
-                Color color = new Color(depth, depth, depth, 1.0f);
+                Color color = new Color(depth, depth, depth, 1.0f); // 緑色を設定
                 depthTex2D.SetPixel(x, y, color);
             }
         }
@@ -152,12 +162,37 @@ public class DepthTextureEffect : MonoBehaviour
 
     void Update()
     {
-        // ウィンドウサイズが変わったときにアスペクト比を調整する
-        if (Screen.width != textureWidth || Screen.height != textureHeight)
+        // Sキーが押されたときにスクリーンショットを保存
+        if (Input.GetKeyDown(KeyCode.S))
         {
-            Screen.SetResolution(textureWidth, textureHeight, false);
-            Camera.main.aspect = (float)textureWidth / textureHeight;
+            SaveScreenshot();
         }
+    }
+
+    void SaveScreenshot()
+    {
+        // 深度画像の保存
+        SaveTextureToFile(depthAsColorTexture, "Assets/Picture/depth_screenshot.png", depthTex2D);
+
+        // カラー画像の保存
+        SaveTextureToFile(colorTexture, "Assets/Picture/color_screenshot.png", colorTex2D);
+    }
+
+    void SaveTextureToFile(RenderTexture renderTexture, string fileName, Texture2D texture2D)
+    {
+        // RenderTextureを一時的にアクティブに設定
+        RenderTexture.active = renderTexture;
+
+        // テクスチャを読み取って画像を保存
+        texture2D.ReadPixels(new Rect(0, 0, renderTexture.width, renderTexture.height), 0, 0);
+        texture2D.Apply();
+
+        byte[] bytes = texture2D.EncodeToPNG();
+        File.WriteAllBytes(fileName, bytes);
+        Debug.Log($"Screenshot saved as {fileName}");
+
+        // RenderTextureのアクティブを解除
+        RenderTexture.active = null;
     }
 
     void OnDestroy()
@@ -167,9 +202,5 @@ public class DepthTextureEffect : MonoBehaviour
         {
             writer.Close();
         }
-
-        // リソースを解放
-        if (depthTexture != null) depthTexture.Release();
-        if (depthAsColorTexture != null) depthAsColorTexture.Release();
     }
 }
