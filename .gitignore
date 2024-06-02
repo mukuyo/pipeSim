@@ -1,6 +1,17 @@
-Logs/
-Temp/
-.DS_Store
-.vscode/
-Model/
-Library/
+# Unity related ignore rules
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Mm]emoryCaptures/
+[Ss]ysCache/
+[Aa]sset[Ss]tore/
+[Dd]ebug/
+
+# User settings
+[Uu]ser[Ss]ettings/
+
+# Ignore Model directory
+Assets/Model/
