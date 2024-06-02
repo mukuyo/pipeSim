@@ -1,9 +1,5 @@
 Logs/
 Temp/
-pipeSim.sln
-Library/
-UserSettings/
 .DS_Store
 .vscode/
-Assembly-CSharp.csproj
-*.meta
+Model/
