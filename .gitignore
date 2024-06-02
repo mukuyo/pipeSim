@@ -15,3 +15,6 @@
 
 # Ignore Model directory
 Assets/Model/
+
+.DS_Store
+.vscode/
