@@ -17,6 +17,7 @@ public class DepthTextureEffect : MonoBehaviour
     private int frameCount = 0;
     private const int maxFrames = 1000;
     private float[,] pixel_stdev;
+    private int count = 0;
 
     void Start()
     {
@@ -120,9 +121,9 @@ public class DepthTextureEffect : MonoBehaviour
         depthTex2D.Apply();
 
         // ノイズの適用
-        float dist_a = 0.00039587120180480275f;
-        float dist_b = 0.5424400827831032f;
-        Debug.Log(depthTex2D.width);
+        float dist_a = 0.0009667970390564464f;
+        float dist_b = 0.2767966038314638f;
+        Debug.Log(depthTex2D.height);
         for (int y = 0; y < depthTex2D.height; y++)
         {
             for (int x = 0; x < depthTex2D.width; x++)
@@ -172,10 +173,12 @@ public class DepthTextureEffect : MonoBehaviour
     void SaveScreenshot()
     {
         // 深度画像の保存
-        SaveTextureToFile(depthAsColorTexture, "Assets/Picture/depth_screenshot.png", depthTex2D);
+        SaveTextureToFile(depthAsColorTexture, $"Assets/Picture/Depth/{count}.png", depthTex2D);
 
         // カラー画像の保存
-        SaveTextureToFile(colorTexture, "Assets/Picture/color_screenshot.png", colorTex2D);
+        SaveTextureToFile(colorTexture, $"Assets/Picture/Color/{count}.png", colorTex2D);
+
+        count = count + 1;
     }
 
     void SaveTextureToFile(RenderTexture renderTexture, string fileName, Texture2D texture2D)
