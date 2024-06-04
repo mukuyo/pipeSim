@@ -64,6 +64,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets/CapturePipe.cs" />
+    <Compile Include="Assets/CaptureOnlyRGB.cs" />
     <Compile Include="Assets/CameraRotate.cs" />
     <Compile Include="Assets/DepthTextureEffect.cs" />
   </ItemGroup>

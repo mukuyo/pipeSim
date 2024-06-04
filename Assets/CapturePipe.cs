@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
-public class CameraPipe : MonoBehaviour
+public class CapturePipe : MonoBehaviour
 {
     public Transform target; // 回転する対象のモデル
     public float duration = 5.0f; // 回転にかける時間（秒）
@@ -13,9 +13,8 @@ public class CameraPipe : MonoBehaviour
     public int screenshotHeight = 1080; // スクリーンショットの高さ
 
     private float currentTime = 0f;
-    private int completedCycles = 0; // 完了した往復の数
+    private int completedCircles = 0; // 完了した円周の数
     private Vector3 initialPosition; // 初期位置を保存
-    private Quaternion initialRotation; // 初期回転を保存
     private Camera cam; // カメラ
     private Camera depthCam;
     private RenderTexture depthTexture;
@@ -28,12 +27,10 @@ public class CameraPipe : MonoBehaviour
     private const int maxFrames = 1000;
     private float[,] pixel_stdev;
     private int count = 0;
-    private bool reverse = false; // 回転方向を逆にするためのフラグ
 
     void Start()
     {
         initialPosition = transform.position;
-        initialRotation = transform.rotation;
         cam = GetComponent<Camera>();
         cam.nearClipPlane = 0.5f; // カメラが描画を開始する距離を設定
         cam.farClipPlane = 100f; // カメラが描画を終了する距離を設定
@@ -52,47 +49,27 @@ public class CameraPipe : MonoBehaviour
 
     IEnumerator RotateCamera()
     {
-        float anglePerFrame = 45f / (duration * frameRate); // ±45度の角度に変更
+        float anglePerFrame = 360f / (duration * frameRate);
         float totalFrames = duration * frameRate;
         float heightPerFrame = heightIncrement / (3 * totalFrames);
 
-        while (completedCycles < 3) // 3回の往復を繰り返す
+        while (completedCircles < 2) // 3周繰り返す
         {
-            // 初期位置に戻す
-            transform.position = initialPosition;
-            transform.rotation = initialRotation;
+            currentTime = 0f; // 時間をリセット
 
-            // 左に45度回転
-            for (int i = 0; i < totalFrames; i++)
-            {
-                transform.RotateAround(target.position, Vector3.up, -anglePerFrame);
-                transform.position += new Vector3(0, heightPerFrame, 0); // 高さを徐々に変更
-                transform.LookAt(target); // ターゲットを常に注視
-                yield return StartCoroutine(CaptureScreenshot(completedCycles * 3 * (int)totalFrames + i));
-                yield return new WaitForSeconds(1f / frameRate);
-            }
-
-            // 右に90度回転
-            for (int i = 0; i < 2 * totalFrames; i++)
+            while (currentTime < duration)
             {
                 transform.RotateAround(target.position, Vector3.up, anglePerFrame);
                 transform.position += new Vector3(0, heightPerFrame, 0); // 高さを徐々に変更
                 transform.LookAt(target); // ターゲットを常に注視
-                yield return StartCoroutine(CaptureScreenshot(completedCycles * 3 * (int)totalFrames + (int)totalFrames + i));
+                currentTime += 1f / frameRate;
+
+                // スクリーンショットを撮影
+                yield return StartCoroutine(CaptureScreenshot(completedCircles * (int)totalFrames + (int)(currentTime * frameRate)));
                 yield return new WaitForSeconds(1f / frameRate);
             }
 
-            // 左に90度回転
-            for (int i = 0; i < 2 * totalFrames; i++)
-            {
-                transform.RotateAround(target.position, Vector3.up, -anglePerFrame);
-                transform.position += new Vector3(0, heightPerFrame, 0); // 高さを徐々に変更
-                transform.LookAt(target); // ターゲットを常に注視
-                yield return StartCoroutine(CaptureScreenshot(completedCycles * 3 * (int)totalFrames + 3 * (int)totalFrames + i));
-                yield return new WaitForSeconds(1f / frameRate);
-            }
-
-            completedCycles++;
+            completedCircles++;
         }
     }
 
@@ -117,13 +94,13 @@ public class CameraPipe : MonoBehaviour
         Destroy(rt);
 
         // 画像をファイルに保存
-        // byte[] bytes = screenShot.EncodeToJPG();
-        // string colorFilename = $"Assets/Pictures/Depth/frame{frameNumber}.jpg";
-        // System.IO.File.WriteAllBytes(colorFilename, bytes);
-        // Debug.Log($"Color screenshot saved as {colorFilename}");
+        byte[] bytes = screenShot.EncodeToJPG();
+        string colorFilename = $"Assets/Pictures/Color/frame{frameNumber}.jpg";
+        System.IO.File.WriteAllBytes(colorFilename, bytes);
+        Debug.Log($"Color screenshot saved as {colorFilename}");
 
         // 深度テクスチャとカラー画像を保存
-        SaveDepthScreenshot(frameNumber);
+        // SaveDepthScreenshot(frameNumber);
 
         yield return null;
     }
@@ -131,9 +108,9 @@ public class CameraPipe : MonoBehaviour
     void SaveDepthScreenshot(int frameNumber)
     {
         // 深度画像の保存
-        SaveTextureToFile(depthAsColorTexture, $"Assets/Pictures/Depth/frame{frameNumber}.png", depthTex2D);
+        // SaveTextureToFile(depthAsColorTexture, $"Assets/Pictures/Depth/frame{frameNumber}.jpg", depthTex2D);
         // カラー画像の保存
-        SaveTextureToFile(colorTexture, $"Assets/Pictures/Color/frame{frameNumber}.png", colorTex2D);
+        // SaveTextureToFile(colorTexture, $"Assets/Pictures/Color/frame{frameNumber}.jpg", colorTex2D);
 
         count++;
     }
@@ -172,121 +149,121 @@ public class CameraPipe : MonoBehaviour
         }
     }
 
-    void OnRenderImage(RenderTexture source, RenderTexture dest)
-    {
-        if (depthTexture == null || depthTexture.width != source.width || depthTexture.height != source.height)
-        {
-            if (depthTexture != null) depthTexture.Release();
-            depthTexture = new RenderTexture(source.width, source.height, 24, RenderTextureFormat.Depth);
+    // void OnRenderImage(RenderTexture source, RenderTexture dest)
+    // {
+    //     if (depthTexture == null || depthTexture.width != source.width || depthTexture.height != source.height)
+    //     {
+    //         if (depthTexture != null) depthTexture.Release();
+    //         depthTexture = new RenderTexture(source.width, source.height, 24, RenderTextureFormat.Depth);
 
-            if (depthAsColorTexture != null) depthAsColorTexture.Release();
-            depthAsColorTexture = new RenderTexture(source.width, source.height, 0, RenderTextureFormat.ARGBFloat);
+    //         if (depthAsColorTexture != null) depthAsColorTexture.Release();
+    //         depthAsColorTexture = new RenderTexture(source.width, source.height, 0, RenderTextureFormat.ARGBFloat);
 
-            depthTex2D = new Texture2D(source.width, source.height, TextureFormat.RGBAFloat, false);
+    //         depthTex2D = new Texture2D(source.width, source.height, TextureFormat.RGBAFloat, false);
 
-            if (colorTexture != null) colorTexture.Release();
-            colorTexture = new RenderTexture(source.width, source.height, 0, RenderTextureFormat.ARGB32);
+    //         if (colorTexture != null) colorTexture.Release();
+    //         colorTexture = new RenderTexture(source.width, source.height, 0, RenderTextureFormat.ARGB32);
 
-            colorTex2D = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false);
-        }
+    //         colorTex2D = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false);
+    //     }
 
-        // 深度用カメラを設定
-        depthCam.CopyFrom(cam);
-        depthCam.targetTexture = depthTexture;
-        depthCam.Render();
-        depthCam.targetTexture = null;
+    //     // 深度用カメラを設定
+    //     depthCam.CopyFrom(cam);
+    //     depthCam.targetTexture = depthTexture;
+    //     depthCam.Render();
+    //     depthCam.targetTexture = null;
 
-        // 深度テクスチャをカラーとしてレンダリング
-        Graphics.Blit(depthTexture, depthAsColorTexture);
+    //     // 深度テクスチャをカラーとしてレンダリング
+    //     Graphics.Blit(depthTexture, depthAsColorTexture);
 
-        // 深度テクスチャにノイズ効果を適用
-        ApplyNoiseEffect(depthAsColorTexture);
+    //     // 深度テクスチャにノイズ効果を適用
+    //     ApplyNoiseEffect(depthAsColorTexture);
 
-        // カラー画像をコピー
-        Graphics.Blit(source, colorTexture);
+    //     // カラー画像をコピー
+    //     Graphics.Blit(source, colorTexture);
 
-        // 結果を画面に描画
-        Graphics.Blit(depthAsColorTexture, dest);
+    //     // 結果を画面に描画
+    //     Graphics.Blit(depthAsColorTexture, dest);
 
-        // フレームカウントを更新
-        frameCount++;
-        if (frameCount >= maxFrames)
-        {
-            // ファイルを閉じる
-            writer.Close();
-            writer = null;
-        }
-    }
+    //     // フレームカウントを更新
+    //     frameCount++;
+    //     if (frameCount >= maxFrames)
+    //     {
+    //         // ファイルを閉じる
+    //         writer.Close();
+    //         writer = null;
+    //     }
+    // }
 
-    private void ApplyNoiseEffect(RenderTexture colorTexture)
-    {
-        RenderTexture.active = colorTexture;
-        depthTex2D.ReadPixels(new Rect(0, 0, colorTexture.width, colorTexture.height), 0, 0);
-        depthTex2D.Apply();
+    // private void ApplyNoiseEffect(RenderTexture colorTexture)
+    // {
+    //     RenderTexture.active = colorTexture;
+    //     depthTex2D.ReadPixels(new Rect(0, 0, colorTexture.width, colorTexture.height), 0, 0);
+    //     depthTex2D.Apply();
 
-        // ノイズの適用
-        float dist_a = 0.0009667970390564464f;
-        float dist_b = 0.2767966038314638f;
-        Debug.Log(depthTex2D.height);
-        for (int y = 0; y < depthTex2D.height; y++)
-        {
-            for (int x = 0; x < depthTex2D.width; x++)
-            {
-                Color pixel = depthTex2D.GetPixel(x, y);
-                float depth = pixel.r;
+    //     // ノイズの適用
+    //     float dist_a = 0.0009667970390564464f;
+    //     float dist_b = 0.2767966038314638f;
+    //     Debug.Log(depthTex2D.height);
+    //     for (int y = 0; y < depthTex2D.height; y++)
+    //     {
+    //         for (int x = 0; x < depthTex2D.width; x++)
+    //         {
+    //             Color pixel = depthTex2D.GetPixel(x, y);
+    //             float depth = pixel.r;
 
-                // 深度値を実際の距離に変換
-                float n = cam.nearClipPlane;
-                float f = cam.farClipPlane;
-                float depthInMeters = (f * n) / ((f - n) * (depth - 1) + f);
+    //             // 深度値を実際の距離に変換
+    //             float n = cam.nearClipPlane;
+    //             float f = cam.farClipPlane;
+    //             float depthInMeters = (f * n) / ((f - n) * (depth - 1) + f);
 
-                float distance_stdev = dist_a * Mathf.Exp(dist_b * depthInMeters);
+    //             float distance_stdev = dist_a * Mathf.Exp(dist_b * depthInMeters);
 
-                float dist_noise = UnityEngine.Random.Range(-distance_stdev, distance_stdev);
-                float pixel_noise = UnityEngine.Random.Range(-pixel_stdev[y, x], pixel_stdev[y, x]);
+    //             float dist_noise = UnityEngine.Random.Range(-distance_stdev, distance_stdev);
+    //             float pixel_noise = UnityEngine.Random.Range(-pixel_stdev[y, x], pixel_stdev[y, x]);
 
-                depthInMeters = depthInMeters + dist_noise + pixel_noise;
-                depthInMeters = Mathf.Clamp(depthInMeters, 0.0f, 10.0f);
+    //             depthInMeters = depthInMeters + dist_noise + pixel_noise;
+    //             depthInMeters = Mathf.Clamp(depthInMeters, 0.0f, 10.0f);
 
-                // 距離を深度値に戻す
-                depth = (f * n) / (depthInMeters * (f - n) + n);
+    //             // 距離を深度値に戻す
+    //             depth = (f * n) / (depthInMeters * (f - n) + n);
 
-                // 更新した深度値をカラーとして設定
-                Color color = new Color(depth, depth, depth, 1.0f); // 緑色を設定
-                depthTex2D.SetPixel(x, y, color);
-            }
-        }
+    //             // 更新した深度値をカラーとして設定
+    //             Color color = new Color(depth, depth, depth, 1.0f); // 緑色を設定
+    //             depthTex2D.SetPixel(x, y, color);
+    //         }
+    //     }
 
-        depthTex2D.Apply();
-        RenderTexture.active = null;
+    //     depthTex2D.Apply();
+    //     RenderTexture.active = null;
 
-        // 変換したテクスチャを再度RenderTextureにコピー
-        Graphics.Blit(depthTex2D, colorTexture);
-    }
+    //     // 変換したテクスチャを再度RenderTextureにコピー
+    //     Graphics.Blit(depthTex2D, colorTexture);
+    // }
 
-    void SaveTextureToFile(RenderTexture renderTexture, string fileName, Texture2D texture2D)
-    {
-        // RenderTextureを一時的にアクティブに設定
-        RenderTexture.active = renderTexture;
+    // void OnDestroy()
+    // {
+    //     // オブジェクトが破棄されるときにファイルを閉じる
+    //     if (writer != null)
+    //     {
+    //         writer.Close();
+    //     }
+    // }
 
-        // テクスチャを読み取って画像を保存
-        texture2D.ReadPixels(new Rect(0, 0, renderTexture.width, renderTexture.height), 0, 0);
-        texture2D.Apply();
+    // void SaveTextureToFile(RenderTexture renderTexture, string fileName, Texture2D texture2D)
+    // {
+    //     // RenderTextureを一時的にアクティブに設定
+    //     RenderTexture.active = renderTexture;
 
-        byte[] bytes = texture2D.EncodeToPNG();
-        File.WriteAllBytes(fileName, bytes);
-        Debug.Log($"Screenshot saved as {fileName}");
+    //     // テクスチャを読み取って画像を保存
+    //     texture2D.ReadPixels(new Rect(0, 0, renderTexture.width, renderTexture.height), 0, 0);
+    //     texture2D.Apply();
 
-        // RenderTextureのアクティブを解除
-        RenderTexture.active = null;
-    }
+    //     byte[] bytes = texture2D.EncodeToPNG();
+    //     File.WriteAllBytes(fileName, bytes);
+    //     Debug.Log($"Screenshot saved as {fileName}");
 
-    void OnDestroy()
-    {
-        // オブジェクトが破棄されるときにファイルを閉じる
-        if (writer != null)
-        {
-            writer.Close();
-        }
-    }
+    //     // RenderTextureのアクティブを解除
+    //     RenderTexture.active = null;
+    // }
 }
