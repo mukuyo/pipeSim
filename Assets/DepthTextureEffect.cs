@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.IO;
 using System;
+using System.Collections.Generic;
 
 public class DepthTextureEffect : MonoBehaviour
 {
@@ -17,13 +18,23 @@ public class DepthTextureEffect : MonoBehaviour
     private int frameCount = 0;
     private const int maxFrames = 1000;
     private float[,] pixel_stdev;
-    private int count = 0;
+    private int count = 2000;
+
+    // 中心ピクセルの測定用変数
+    private const int numMeasurements = 100;
+    private float[] centerDepthMeasurements = new float[numMeasurements];
+    private int measurementCount = 0;
+    private bool isMeasuring = false; // 測定中かどうかのフラグ
+    private int loop_count = 0;
+    private float sum_depth = 0f;
+    // private float[] depth_list = new float[100];
+    private List<float> depth_list = new List<float>();
 
     void Start()
     {
         cam = GetComponent<Camera>();
         cam.nearClipPlane = 0.5f; // カメラが描画を開始する距離を設定
-        cam.farClipPlane = 6f; // カメラが描画を終了する距離を設定
+        cam.farClipPlane = 10f; // カメラが描画を終了する距離を設定
         cam.depthTextureMode = DepthTextureMode.Depth;
 
         // 深度用のカメラを作成
@@ -32,6 +43,7 @@ public class DepthTextureEffect : MonoBehaviour
         depthCam.enabled = false; // 手動でレンダリングするため無効にする
         writer = new StreamWriter("DepthData.txt", false);
         LoadPixelStdDevs();
+
     }
 
     void LoadPixelStdDevs()
@@ -42,7 +54,7 @@ public class DepthTextureEffect : MonoBehaviour
         int height = lines.Length;
         int width = lines[0].Split('\t').Length - 1;
         pixel_stdev = new float[height, width];
-        Debug.Log(width);
+        // Debug.Log(width);
         for (int y = 0; y < height; y++)
         {
             string[] values = lines[y].Split('\t');
@@ -116,6 +128,7 @@ public class DepthTextureEffect : MonoBehaviour
 
     private void ApplyNoiseEffect(RenderTexture colorTexture)
     {
+        loop_count += 1;
         RenderTexture.active = colorTexture;
         depthTex2D.ReadPixels(new Rect(0, 0, colorTexture.width, colorTexture.height), 0, 0);
         depthTex2D.Apply();
@@ -135,23 +148,43 @@ public class DepthTextureEffect : MonoBehaviour
                 float n = cam.nearClipPlane;
                 float f = cam.farClipPlane;
                 float depthInMeters = (f * n) / ((f - n) * (depth - 1) + f);
+                float depth_t = depthInMeters;
 
                 float distance_stdev = dist_a * Mathf.Exp(dist_b * depthInMeters);
 
                 float dist_noise = UnityEngine.Random.Range(-distance_stdev, distance_stdev);
                 float pixel_noise = UnityEngine.Random.Range(-pixel_stdev[y, x], pixel_stdev[y, x]);
 
-                depthInMeters = depthInMeters + dist_noise + pixel_noise;
+                depthInMeters = depthInMeters + dist_noise;
                 depthInMeters = Mathf.Clamp(depthInMeters, 0.0f, 10.0f);
 
                 // 距離を深度値に戻す
                 depth = (f * n) / (depthInMeters * (f - n) + n);
-
+                if(y == depthTex2D.height/2 && x==depthTex2D.width/2){
+                    if (loop_count <100){
+                        sum_depth += depthInMeters;
+                        // depth_list[loop_count] = depthInMeters;
+                        depth_list.Add(depthInMeters);
+                    }
+                    Debug.Log(depth_t);
+                }
                 // depth = 1.0f - depth;
                 // 更新した深度値をカラーとして設定
                 Color color = new Color(depth, depth, depth, 1.0f); // 緑色を設定
                 depthTex2D.SetPixel(x, y, color);
             }
+        }
+        if (loop_count == 100) {
+            WriteDepthMeasurementsToFile(depth_list);
+            float sumOfSquares = 0f;
+            for (int i = 0; i < 100; i++)
+            {
+                float difference = depth_list[i] - sum_depth/100f;
+                sumOfSquares += difference * difference;
+            }
+            float variance = sumOfSquares / 100f;
+            float standardDeviation = Mathf.Sqrt(variance);
+            Debug.Log($"std: {standardDeviation}");
         }
 
         depthTex2D.Apply();
@@ -163,20 +196,33 @@ public class DepthTextureEffect : MonoBehaviour
 
     void Update()
     {
-        // Sキーが押されたときにスクリーンショットを保存
-        if (Input.GetKeyDown(KeyCode.S))
+        // "P"キーが押されたときにSaveScreenshotを呼び出す
+        if (Input.GetKeyDown(KeyCode.P))
         {
+            Debug.Log($"Screenshot saved");
             SaveScreenshot();
         }
     }
 
+    void WriteDepthMeasurementsToFile(List<float> measurements)
+    {
+        string filePath = "depth_measurements.txt";
+        StreamWriter writer = new StreamWriter(filePath, false);
+
+        foreach (float measurement in measurements)
+        {
+            writer.WriteLine(measurement.ToString());
+        }
+
+        writer.Close();
+    }
     void SaveScreenshot()
     {
         // 深度画像の保存
-        SaveTextureToFile(depthAsColorTexture, $"Assets/Picture/Depth/{count}.png", depthTex2D);
+        SaveTextureToFile(depthAsColorTexture, $"Assets/Pictures/Depth/{count}.png", depthTex2D);
 
         // カラー画像の保存
-        SaveTextureToFile(colorTexture, $"Assets/Picture/Color/{count}.png", colorTex2D);
+        SaveTextureToFile(colorTexture, $"Assets/Pictures/Color/{count}.jpg", colorTex2D);
 
         count = count + 1;
     }
@@ -207,3 +253,4 @@ public class DepthTextureEffect : MonoBehaviour
         }
     }
 }
+
