@@ -179,10 +179,10 @@ private void ApplyDepthEffect(RenderTexture depthTexture)
     void SaveScreenshot()
     {
         // Save the color image
-        SaveTextureToFile(colorTexture, $"/home/th/ws/research/PipeIsoGen/data/sim/rgb/rgb.png", colorTex2D);
+        SaveTextureToFile(colorTexture, $"/home/th/ws/research/PipeIsoGen/data/sim/images/test/rgb.png", colorTex2D);
 
         // Save the depth image
-        SaveDepthTextureToFile(depthAsColorTexture, $"/home/th/ws/research/PipeIsoGen/data/sim/depth/depth.png", depthTex2D);
+        SaveDepthTextureToFile(depthAsColorTexture, $"/home/th/ws/research/PipeIsoGen/data/sim/images/test/depth.png", depthTex2D);
     }
 
     void SaveTextureToFile(RenderTexture renderTexture, string fileName, Texture2D texture2D)
