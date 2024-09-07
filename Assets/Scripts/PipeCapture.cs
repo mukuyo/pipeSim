@@ -46,8 +46,6 @@ public class PipeCapture : MonoBehaviour
         depthTex2D = new Texture2D(width, height, TextureFormat.R16, false);
         colorTexture = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32);
         colorTex2D = new Texture2D(width, height, TextureFormat.RGB24, false);
-
-        LoadPixelStdDevs();
     }
 
     void OnRenderImage(RenderTexture source, RenderTexture dest)
@@ -125,7 +123,7 @@ public class PipeCapture : MonoBehaviour
                                     (cam.farClipPlane - (cam.farClipPlane - cam.nearClipPlane) * depth);
                 
                 float distance_stdev = dist_a * Mathf.Exp(dist_b * linearDepth);
-                float dist_nois = UnityEngine.Random.Range(-distance_stdev, distance_stdev);
+                float dist_noise = UnityEngine.Random.Range(-distance_stdev, distance_stdev);
                 float depthInMm = (linearDepth + dist_noise) * 100.0f;
 
                 if (y == depthTex2D.height / 2 && x == depthTex2D.width / 2)
