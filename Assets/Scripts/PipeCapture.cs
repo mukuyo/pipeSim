@@ -106,40 +106,6 @@ public class PipeCapture : MonoBehaviour
         Debug.Log(projMatrix);
     }
 
-    void LoadPixelStdDevs()
-    {
-        // テキストファイルからピクセルの標準偏差を読み込む
-        string filePath = "Assets/Data/pixel_std_devs.txt";
-        string[] lines = File.ReadAllLines(filePath);
-        int height = lines.Length;
-        int width = lines[0].Split('\t').Length - 1;
-        pixel_stdev = new float[height, width];
-        // Debug.Log(width);
-        for (int y = 0; y < height; y++)
-        {
-            string[] values = lines[y].Split('\t');
-            for (int x = 0; x < width; x++)
-            {
-                // 空の文字列があればスキップする
-                if (string.IsNullOrWhiteSpace(values[x]))
-                {
-                    Debug.LogWarning($"Empty or whitespace value on line {y + 1}, column {x + 1}");
-                    continue;
-                }
-
-                // 浮動小数点数に変換できない場合にエラーをログに記録する
-                if (!float.TryParse(values[x], out float parsedValue))
-                {
-                    Debug.LogError($"Failed to parse float value on line {y + 1}, value: {values[x]}");
-                    continue;
-                }
-
-                // 正常に変換された場合は、配列に格納する
-                pixel_stdev[y, x] = parsedValue;
-            }
-        }
-    }
-
     private void ApplyDepthEffect(RenderTexture depthTexture)
     {
         RenderTexture.active = depthTexture;
@@ -159,7 +125,7 @@ public class PipeCapture : MonoBehaviour
                                     (cam.farClipPlane - (cam.farClipPlane - cam.nearClipPlane) * depth);
                 
                 float distance_stdev = dist_a * Mathf.Exp(dist_b * linearDepth);
-                float dist_noise = UnityEngine.Random.Range(-distance_stdev, distance_stdev);
+                float dist_nois = UnityEngine.Random.Range(-distance_stdev, distance_stdev);
                 float depthInMm = (linearDepth + dist_noise) * 100.0f;
 
                 if (y == depthTex2D.height / 2 && x == depthTex2D.width / 2)
