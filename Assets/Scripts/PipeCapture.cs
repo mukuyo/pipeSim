@@ -14,15 +14,15 @@ public class PipeCapture : MonoBehaviour
     private float[,] pixel_stdev;
     private const int width = 640; // Width for texture
     private const int height = 480; // Height for texture
-    private float dist_a = 0.0009667970390564464f;
-    private float dist_b = 0.2767966038314638f;
-    private string save_folder = "/home/th/research_ws/PipeIsoGen/data/sim/images/test"; // 修正
+    private float dist_a = 0.0016241095577658135f;
+    private float dist_b = 0.17552242127996232f;
+    private string save_folder = "/home/th/ws/research/PipeIsoGen/data/sim/images/test"; // 修正
 
     // Directly specify intrinsic parameters
     private readonly float[] cam_K = new float[]
     {
-        606.661011f, 0.0f, 325.939575f,
-        0.0f, 606.899597f, 243.979828f,
+        616.055542f, 0.0f, 321.531097f,
+        0.0f, 616.339722f, 240.286011f,
         0.0f, 0.0f, 1.0f
     };
 
@@ -125,6 +125,7 @@ public class PipeCapture : MonoBehaviour
                 float distance_stdev = dist_a * Mathf.Exp(dist_b * linearDepth);
                 float dist_noise = UnityEngine.Random.Range(-distance_stdev, distance_stdev);
                 float depthInMm = (linearDepth + dist_noise) * 100.0f;
+                // depthInMm = linearDepth * 100.0f;
 
                 if (y == depthTex2D.height / 2 && x == depthTex2D.width / 2)
                     Debug.Log($"Depth in mm: {depthInMm}");
@@ -176,10 +177,10 @@ public class PipeCapture : MonoBehaviour
     {
 
         // Save the color image
-        SaveTextureToFile(colorTexture, save_folder + "/rgb.png", colorTex2D);
+        SaveTextureToFile(colorTexture, save_folder + "/rgb/frame0.png", colorTex2D);
 
         // Save the depth image
-        SaveDepthTextureToFile(depthAsColorTexture, save_folder + "/depth.png", depthTex2D);
+        SaveDepthTextureToFile(depthAsColorTexture, save_folder + "/depth/frame0.png", depthTex2D);
     }
 
     void SaveTextureToFile(RenderTexture renderTexture, string fileName, Texture2D texture2D)
