@@ -8,8 +8,8 @@ public class PoseLogger : MonoBehaviour
 
     private readonly float[] cam_K = new float[]
     {
-        606.661011f, 0.0f, 325.939575f,
-        0.0f, 606.899597f, 243.979828f,
+        616.055542f, 0.0f, 321.531097f,
+        0.0f, 616.339722f, 240.286011f,
         0.0f, 0.0f, 1.0f
     };
 
@@ -67,15 +67,15 @@ private void LogObjectPose()
     PoseData poseData = new PoseData();
     poseData.rotation = new Matrix3x3
     {
-        row0 = new Vector3(objectToCameraMatrix[0, 0], objectToCameraMatrix[1, 0]-1, objectToCameraMatrix[2, 0]+1),
-        row1 = new Vector3(objectToCameraMatrix[0, 1]-1, objectToCameraMatrix[1, 1], objectToCameraMatrix[2, 1]-1),
-        row2 = new Vector3(objectToCameraMatrix[0, 2]+1, objectToCameraMatrix[1, 2]-1, objectToCameraMatrix[2, 2])
+        row0 = new Vector3(objectToCameraMatrix[0, 0], objectToCameraMatrix[1, 0], objectToCameraMatrix[2, 0]),
+        row1 = new Vector3(objectToCameraMatrix[0, 1], objectToCameraMatrix[1, 1], objectToCameraMatrix[2, 1]),
+        row2 = new Vector3(objectToCameraMatrix[0, 2], objectToCameraMatrix[1, 2], objectToCameraMatrix[2, 2])
     };
-    poseData.translation = new Vector3(objectToCameraMatrix[0, 3], -objectToCameraMatrix[1, 3], -objectToCameraMatrix[2, 3]);
+    poseData.translation = new Vector3(objectToCameraMatrix[0, 3], objectToCameraMatrix[1, 3], objectToCameraMatrix[2, 3]);
 
     // JSON形式でシリアライズし、ファイルに保存
     string json = JsonUtility.ToJson(poseData, true);
-    string filePath = "/home/th/research_ws/PipeIsoGen/data/outputs/pose/elbow/true_pose.json";
+    string filePath = "/home/th/ws/research/PipeIsoGen/data/outputs/pose/elbow/gt.json";
     File.WriteAllText(filePath, json);
 
     Debug.Log("姿勢データが保存されました: " + filePath);

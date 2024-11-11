@@ -16,6 +16,8 @@ public class PipeCapture : MonoBehaviour
     private const int height = 480; // Height for texture
     private float dist_a = 0.0016241095577658135f;
     private float dist_b = 0.17552242127996232f;
+    // private float dist_a = 0.043464f;
+    // private float dist_b = 0.263680f;
     private string save_folder = "/home/th/ws/research/PipeIsoGen/data/sim/images/test"; // 修正
 
     // Directly specify intrinsic parameters
@@ -127,8 +129,8 @@ public class PipeCapture : MonoBehaviour
                 float depthInMm = (linearDepth + dist_noise) * 100.0f;
                 // depthInMm = linearDepth * 100.0f;
 
-                if (y == depthTex2D.height / 2 && x == depthTex2D.width / 2)
-                    Debug.Log($"Depth in mm: {depthInMm}");
+                // if (y == depthTex2D.height / 2 && x == depthTex2D.width / 2)
+                //     Debug.Log($"Depth in mm: {depthInMm}");
 
                 ushort depthInUShort = (ushort)Mathf.Clamp(depthInMm, 0, ushort.MaxValue);
                 
