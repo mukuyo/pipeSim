@@ -19,14 +19,8 @@ public class MatrixData
 
 public class PoseEstimator : MonoBehaviour
 {
-    public enum PartType
-    {
-        Elbow,
-        Tee
-    }
-
-    public PartType selectedPartType; // Select part type from the inspector
-    public List<Transform> targetObjects; // List of target objects to get the poses of
+    public List<Transform> elbowTargetObjects; // List of target objects for Elbow
+    public List<Transform> teeTargetObjects; // List of target objects for Tee
     public Camera mainCamera; // Camera object
 
     // Camera intrinsic parameters
@@ -82,52 +76,58 @@ public class PoseEstimator : MonoBehaviour
         camera.projectionMatrix = projMatrix;
     }
 
-private void LogObjectsPose()
-{
-    foreach (Transform targetObject in targetObjects)
+    private void LogObjectsPose()
     {
-        Matrix4x4 poseMatrix = GetPoseInCameraCoordinates(targetObject, mainCamera);
-        Debug.Log($"Pose Matrix for {targetObject.name}:\n{poseMatrix}");
-
-        Vector3 adjustedTranslation = new Vector3(
-            poseMatrix.m03 * 100.0f - 0.35f,
-            -poseMatrix.m13 * 100.0f + 4.65f,
-            poseMatrix.m23 * 100.0f - 5.95f
-        );  
-        if (selectedPartType.ToString() == "Elbow") {
-            adjustedTranslation = new Vector3(
-                poseMatrix.m03 * 100.0f - 5.0f,
-                -poseMatrix.m13 * 100.0f + 5.0f,
-                poseMatrix.m23 * 100.0f - 3.375f
-            );
-        }
-
-        SaveMatrixToJson(poseMatrix, adjustedTranslation);
-    }
-}
-
-void SaveMatrixToJson(Matrix4x4 matrix, Vector3 adjustedTranslation)
-{
-    MatrixData matrixData = new MatrixData
-    {
-        rotation = new MatrixData.RotationData
+        for (int i = 0; i < 2; i++)
         {
-            row0 = new Vector3(matrix.m02, -matrix.m00, matrix.m01),
-            row1 = new Vector3(-matrix.m12, matrix.m10, -matrix.m11),
-            row2 = new Vector3(matrix.m22, -matrix.m20, matrix.m21)            
-        },
-        translation = adjustedTranslation
-    };
+            List<Transform> targetObjects = i == 0 ? elbowTargetObjects : teeTargetObjects;
+            List<MatrixData> poseDataList = new List<MatrixData>(); // List to hold poses for each target object
 
-    string json = JsonUtility.ToJson(matrixData, true);
-    string filePath = Path.Combine(baseFilePath, selectedPartType.ToString().ToLower(), "gt.json");
+            foreach (Transform targetObject in targetObjects)
+            {
+                Matrix4x4 poseMatrix = GetPoseInCameraCoordinates(targetObject, mainCamera);
+                Debug.Log($"Pose Matrix for {targetObject.name}:\n{poseMatrix}");
 
-    // Save to the dynamically constructed path
-    File.WriteAllText(filePath, json);
+                Vector3 adjustedTranslation = (i == 0)
+                    ? new Vector3(
+                        poseMatrix.m03 * 100.0f - 5.0f,
+                        -poseMatrix.m13 * 100.0f + 5.0f,
+                        poseMatrix.m23 * 100.0f - 3.375f)
+                    : new Vector3(
+                        poseMatrix.m03 * 100.0f - 0.35f,
+                        -poseMatrix.m13 * 100.0f + 4.65f,
+                        poseMatrix.m23 * 100.0f - 5.95f);
 
-    Debug.Log($"Saved pose data to {filePath}");
-}
+                // Create a MatrixData object and add it to the list
+                MatrixData matrixData = new MatrixData
+                {
+                    rotation = new MatrixData.RotationData
+                    {
+                        row0 = new Vector3(poseMatrix.m02, -poseMatrix.m00, poseMatrix.m01),
+                        row1 = new Vector3(-poseMatrix.m12, poseMatrix.m10, -poseMatrix.m11),
+                        row2 = new Vector3(poseMatrix.m22, -poseMatrix.m20, poseMatrix.m21)
+                    },
+                    translation = adjustedTranslation
+                };
+                poseDataList.Add(matrixData); // Add each pose to the list
+            }
 
+            // Serialize the pose data list to JSON and save it to a file
+            string json = JsonUtility.ToJson(new PoseDataWrapper { poses = poseDataList }, true);
+            string fileName = i == 0 ? "elbow/gt_poses.json" : "tee/gt_poses.json";
+            string filePath = Path.Combine(baseFilePath, fileName);
+
+            try
+            {
+                File.WriteAllText(filePath, json);
+                Debug.Log($"Pose data saved to {filePath}");
+            }
+            catch (IOException e)
+            {
+                Debug.LogError($"Failed to write pose data to file: {e.Message}");
+            }
+        }
+    }
 
     Matrix4x4 GetPoseInCameraCoordinates(Transform objTransform, Camera cam)
     {
@@ -145,28 +145,9 @@ void SaveMatrixToJson(Matrix4x4 matrix, Vector3 adjustedTranslation)
         return poseMatrix;
     }
 
-    // void SaveMatrixToJson(Matrix4x4 matrix)
-    // {
-    //     MatrixData matrixData = new MatrixData
-    //     {
-    //         rotation = new MatrixData.RotationData
-    //         {
-    //             // row0 = new Vector3(matrix.m00, matrix.m01, matrix.m02),
-    //             // row1 = new Vector3(matrix.m10, matrix.m11, matrix.m12),
-    //             // row2 = new Vector3(matrix.m20, matrix.m21, matrix.m22)
-    //             row0 = new Vector3(matrix.m02, -matrix.m00, matrix.m01),
-    //             row1 = new Vector3(-matrix.m12, matrix.m10, -matrix.m11),
-    //             row2 = new Vector3(matrix.m22, -matrix.m20, matrix.m21)            
-    //         },
-    //         translation = new Vector3(matrix.m03 * 100.0f, -matrix.m13 * 100.0f, matrix.m23 * 100.0f)
-    //     };
-
-    //     string json = JsonUtility.ToJson(matrixData, true);
-    //     string filePath = Path.Combine(baseFilePath, selectedPartType.ToString().ToLower(), "gt.json");
-
-    //     // Save to the dynamically constructed path
-    //     File.WriteAllText(filePath, json);
-
-    //     Debug.Log($"Saved pose data to {filePath}");
-    // }
+    [System.Serializable]
+    private class PoseDataWrapper
+    {
+        public List<MatrixData> poses;
+    }
 }
