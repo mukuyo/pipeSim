@@ -23,8 +23,8 @@ public class PipeCapture : MonoBehaviour
     // Directly specify intrinsic parameters
     private readonly float[] cam_K = new float[]
     {
-        616.055542f, 0.0f, 321.531097f,
-        0.0f, 616.339722f, 240.286011f,
+        6.06661011e+02f, 0.0f, 3.25939575e+02f,
+        0.0f, 6.06899597e+02f, 2.43979828e+02f,
         0.0f, 0.0f, 1.0f
     };
 

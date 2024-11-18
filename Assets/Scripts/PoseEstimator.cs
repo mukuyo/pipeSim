@@ -26,8 +26,8 @@ public class PoseEstimator : MonoBehaviour
     // Camera intrinsic parameters
     private readonly float[] cam_K = new float[]
     {
-        616.055542f, 0.0f, 321.531097f,
-        0.0f, 616.339722f, 240.286011f,
+        6.06661011e+02f, 0.0f, 3.25939575e+02f,
+        0.0f, 6.06899597e+02f, 2.43979828e+02f,
         0.0f, 0.0f, 1.0f
     };
 
@@ -85,19 +85,66 @@ public class PoseEstimator : MonoBehaviour
 
             foreach (Transform targetObject in targetObjects)
             {
+                Transform tempObject = targetObject;
+                float x_val = 0.04f;
+                if (i == 0) {
+                    if (targetObject.eulerAngles.y == 90) {
+                        x_val *= -1;
+                    } else if (targetObject.eulerAngles.y == 270) {
+                        x_val *= 2;
+                    }
+                } else {
+                    x_val = -0.02f;
+                    if (targetObject.eulerAngles.y == 90) {
+                        x_val *= 2;
+                    } else if (targetObject.eulerAngles.y == 270) {
+                        x_val *= 2;
+                    }
+                }
+                // if (i == 0) {
+                //     tempObject.position = new Vector3(targetObject.position.x + x_val, targetObject.position.y + 0.075f, targetObject.position.z - 0.05f);
+                // } else {
+                //     tempObject.position = new Vector3(targetObject.position.x + x_val, targetObject.position.y + 0.00f, targetObject.position.z - 0.05f);
+                // }
+                tempObject.position = new Vector3(targetObject.position.x, targetObject.position.y, targetObject.position.z);
+                
                 Matrix4x4 poseMatrix = GetPoseInCameraCoordinates(targetObject, mainCamera);
-                Debug.Log($"Pose Matrix for {targetObject.name}:\n{poseMatrix}");
+                // Debug.Log($"Pose Matrix for {targetObject.name}:\n{poseMatrix}");
+
+                // Vector3 adjustedTranslation = (i == 0)
+                //     ? new Vector3(
+                //         poseMatrix.m03 * 100.0f - 5.0f,
+                //         -poseMatrix.m13 * 100.0f + 5.0f,
+                //         poseMatrix.m23 * 100.0f - 3.375f)
+                //     : new Vector3(
+                //         poseMatrix.m03 * 100.0f - 0.35f,
+                //         -poseMatrix.m13 * 100.0f + 4.65f,
+                //         poseMatrix.m23 * 100.0f - 5.95f);
+                Debug.Log($"Target object position: {Mathf.Cos(targetObject.eulerAngles.y * Mathf.Deg2Rad)}");
+                
+                // float x_val = -5f;
+
+                // if (targetObject.eulerAngles.y == 90) {
+                //     x_val *= -1;
+                // }
+                // } else if (targetObject.eulerAngles.y == 180) {
+                //     x_val *= -1;
+                // } else if (targetObject.eulerAngles.y == 270) {
+                //     x_val *= -1;
+                // }
 
                 Vector3 adjustedTranslation = (i == 0)
                     ? new Vector3(
-                        poseMatrix.m03 * 100.0f - 5.0f,
-                        -poseMatrix.m13 * 100.0f + 5.0f,
-                        poseMatrix.m23 * 100.0f - 3.375f)
+                        // poseMatrix.m03 * 100.0f + 5.0f * Mathf.Sin(targetObject.eulerAngles.y * Mathf.Deg2Rad),
+                        // -poseMatrix.m13 * 100.0f - 7.5f,
+                        // poseMatrix.m23 * 100.0f + 20.0f)
+                        poseMatrix.m03 * 100.0f,
+                        -poseMatrix.m13 * 100.0f,
+                        poseMatrix.m23 * 100.0f)
                     : new Vector3(
-                        poseMatrix.m03 * 100.0f - 0.35f,
-                        -poseMatrix.m13 * 100.0f + 4.65f,
-                        poseMatrix.m23 * 100.0f - 5.95f);
-
+                        poseMatrix.m03 * 100.0f,
+                        -poseMatrix.m13 * 100.0f,
+                        poseMatrix.m23 * 100.0f);
                 // Create a MatrixData object and add it to the list
                 MatrixData matrixData = new MatrixData
                 {
@@ -120,11 +167,11 @@ public class PoseEstimator : MonoBehaviour
             try
             {
                 File.WriteAllText(filePath, json);
-                Debug.Log($"Pose data saved to {filePath}");
+                // Debug.Log($"Pose data saved to {filePath}");
             }
             catch (IOException e)
             {
-                Debug.LogError($"Failed to write pose data to file: {e.Message}");
+                // Debug.LogError($"Failed to write pose data to file: {e.Message}");
             }
         }
     }
