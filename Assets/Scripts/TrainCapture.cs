@@ -4,7 +4,6 @@ using System.IO;
 
 public class TrainCapture : MonoBehaviour
 {
-    public RawImage displayImage;  // カメラ映像を表示するためのUI要素
     private Camera cam;
 
     private RenderTexture colorTexture;
@@ -32,9 +31,6 @@ public class TrainCapture : MonoBehaviour
         // RenderTextureとTexture2Dのセットアップ
         colorTexture = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32);
         colorTex2D = new Texture2D(width, height, TextureFormat.RGB24, false);
-
-        // カメラ映像をUIに表示
-        displayImage.texture = colorTexture;
     }
 
     void OnRenderImage(RenderTexture source, RenderTexture dest)

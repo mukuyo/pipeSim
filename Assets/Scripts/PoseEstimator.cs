@@ -6,6 +6,7 @@ using UnityEngine;
 public class MatrixData
 {
     public RotationData rotation;
+    public Vector3 rotationAsEuler;
     public Vector3 translation;
 
     [System.Serializable]
@@ -16,6 +17,7 @@ public class MatrixData
         public Vector3 row2;
     }
 }
+
 
 public class PoseEstimator : MonoBehaviour
 {
@@ -57,11 +59,10 @@ public class PoseEstimator : MonoBehaviour
             return;
         }
 
-        Camera camera = mainCamera;
-        camera.farClipPlane = 10f;
-        camera.nearClipPlane = 0.5f;
-        float near = camera.nearClipPlane;
-        float far = camera.farClipPlane;
+        mainCamera.farClipPlane = 10f;
+        mainCamera.nearClipPlane = 0.5f;
+        float near = mainCamera.nearClipPlane;
+        float far = mainCamera.farClipPlane;
 
         Matrix4x4 projMatrix = new Matrix4x4();
         projMatrix[0, 0] = 2.0f * cam_K[0] / width;
@@ -73,7 +74,7 @@ public class PoseEstimator : MonoBehaviour
         projMatrix[3, 2] = -1.0f;
         projMatrix[3, 3] = 0.0f;
 
-        camera.projectionMatrix = projMatrix;
+        mainCamera.projectionMatrix = projMatrix;
     }
 
     private void LogObjectsPose()
@@ -85,77 +86,49 @@ public class PoseEstimator : MonoBehaviour
 
             foreach (Transform targetObject in targetObjects)
             {
-                Transform tempObject = targetObject;
-                float x_val = 0.04f;
-                if (i == 0) {
-                    if (targetObject.eulerAngles.y == 90) {
-                        x_val *= -1;
-                    } else if (targetObject.eulerAngles.y == 270) {
-                        x_val *= 2;
-                    }
-                } else {
-                    x_val = -0.02f;
-                    if (targetObject.eulerAngles.y == 90) {
-                        x_val *= 2;
-                    } else if (targetObject.eulerAngles.y == 270) {
-                        x_val *= 2;
-                    }
-                }
-                // if (i == 0) {
-                //     tempObject.position = new Vector3(targetObject.position.x + x_val, targetObject.position.y + 0.075f, targetObject.position.z - 0.05f);
-                // } else {
-                //     tempObject.position = new Vector3(targetObject.position.x + x_val, targetObject.position.y + 0.00f, targetObject.position.z - 0.05f);
-                // }
-                tempObject.position = new Vector3(targetObject.position.x, targetObject.position.y, targetObject.position.z);
-                
+                targetObject.position = new Vector3(targetObject.position.x, targetObject.position.y, targetObject.position.z);
                 Matrix4x4 poseMatrix = GetPoseInCameraCoordinates(targetObject, mainCamera);
-                // Debug.Log($"Pose Matrix for {targetObject.name}:\n{poseMatrix}");
-
-                // Vector3 adjustedTranslation = (i == 0)
-                //     ? new Vector3(
-                //         poseMatrix.m03 * 100.0f - 5.0f,
-                //         -poseMatrix.m13 * 100.0f + 5.0f,
-                //         poseMatrix.m23 * 100.0f - 3.375f)
-                //     : new Vector3(
-                //         poseMatrix.m03 * 100.0f - 0.35f,
-                //         -poseMatrix.m13 * 100.0f + 4.65f,
-                //         poseMatrix.m23 * 100.0f - 5.95f);
-                Debug.Log($"Target object position: {Mathf.Cos(targetObject.eulerAngles.y * Mathf.Deg2Rad)}");
-                
-                // float x_val = -5f;
-
-                // if (targetObject.eulerAngles.y == 90) {
-                //     x_val *= -1;
-                // }
-                // } else if (targetObject.eulerAngles.y == 180) {
-                //     x_val *= -1;
-                // } else if (targetObject.eulerAngles.y == 270) {
-                //     x_val *= -1;
-                // }
-
-                Vector3 adjustedTranslation = (i == 0)
-                    ? new Vector3(
-                        // poseMatrix.m03 * 100.0f + 5.0f * Mathf.Sin(targetObject.eulerAngles.y * Mathf.Deg2Rad),
-                        // -poseMatrix.m13 * 100.0f - 7.5f,
-                        // poseMatrix.m23 * 100.0f + 20.0f)
+                Vector3 adjustedTranslation = new Vector3(
                         poseMatrix.m03 * 100.0f,
-                        -poseMatrix.m13 * 100.0f,
-                        poseMatrix.m23 * 100.0f)
-                    : new Vector3(
-                        poseMatrix.m03 * 100.0f,
-                        -poseMatrix.m13 * 100.0f,
+                        poseMatrix.m13 * 100.0f,
                         poseMatrix.m23 * 100.0f);
+
+                // Apply the conversion to LINEMOD's coordinate system:
+                adjustedTranslation = new Vector3(adjustedTranslation.x, adjustedTranslation.y, adjustedTranslation.z);
+
+                // Calculate the rotation as Euler angles
+                Vector3 rotationEuler = targetObject.eulerAngles;
+
+                // Adjust the rotation to match LINEMOD's coordinate system (if necessary)
+                // If LINEMOD uses a different convention, apply the appropriate transformations
+                rotationEuler = new Vector3(rotationEuler.x, rotationEuler.y, rotationEuler.z);
+
+                
                 // Create a MatrixData object and add it to the list
                 MatrixData matrixData = new MatrixData
                 {
                     rotation = new MatrixData.RotationData
                     {
-                        row0 = new Vector3(poseMatrix.m02, -poseMatrix.m00, poseMatrix.m01),
-                        row1 = new Vector3(-poseMatrix.m12, poseMatrix.m10, -poseMatrix.m11),
-                        row2 = new Vector3(poseMatrix.m22, -poseMatrix.m20, poseMatrix.m21)
+                        row0 = new Vector3(poseMatrix.m00, -poseMatrix.m02, poseMatrix.m01),
+                        row1 = new Vector3(poseMatrix.m10, -poseMatrix.m12, -poseMatrix.m11),
+                        row2 = new Vector3(-poseMatrix.m20, poseMatrix.m22, poseMatrix.m21)
                     },
+                    rotationAsEuler = rotationEuler, // Add Euler angles
                     translation = adjustedTranslation
                 };
+                // if (targetObjects == teeTargetObjects) {
+                    matrixData = new MatrixData
+                    {
+                        rotation = new MatrixData.RotationData
+                        {
+                            row0 = new Vector3(poseMatrix.m02, -poseMatrix.m00, poseMatrix.m01),
+                            row1 = new Vector3(-poseMatrix.m12, poseMatrix.m10, -poseMatrix.m11),
+                            row2 = new Vector3(poseMatrix.m22, -poseMatrix.m20, poseMatrix.m21)
+                        },
+                        rotationAsEuler = rotationEuler, // Add Euler angles
+                        translation = adjustedTranslation
+                    };
+                // }
                 poseDataList.Add(matrixData); // Add each pose to the list
             }
 
@@ -167,14 +140,15 @@ public class PoseEstimator : MonoBehaviour
             try
             {
                 File.WriteAllText(filePath, json);
-                // Debug.Log($"Pose data saved to {filePath}");
+                Debug.Log($"Pose data saved to {filePath}");
             }
             catch (IOException e)
             {
-                // Debug.LogError($"Failed to write pose data to file: {e.Message}");
+                Debug.LogError($"Failed to write pose data to file: {e.Message}");
             }
         }
     }
+
 
     Matrix4x4 GetPoseInCameraCoordinates(Transform objTransform, Camera cam)
     {
