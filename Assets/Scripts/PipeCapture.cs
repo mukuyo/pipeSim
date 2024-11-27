@@ -17,11 +17,11 @@ public class PipeCapture : MonoBehaviour
     // private float dist_a = 0.0009667970390564464f;
     // private float dist_b = 0.2767966038314638f;
 
-    // private float dist_a = 0.0016241095577658135f;
-    // private float dist_b = 0.17552242127996232f;
+    private float dist_a = 0.0016241095577658135f;
+    private float dist_b = 0.17552242127996232f;
 
-    private float dist_a = 0.043464f;
-    private float dist_b = 0.263680f;
+    // private float dist_a = 0.043464f;
+    // private float dist_b = 0.263680f;
     private string save_folder = "/home/th/ws/research/PipeIsoGen/data/sim/images/test"; // 修正
 
     // Directly specify intrinsic parameters
