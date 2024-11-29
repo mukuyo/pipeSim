@@ -130,7 +130,7 @@ public class PipeCapture : MonoBehaviour
                 
                 float distance_stdev = dist_a * Mathf.Exp(dist_b * linearDepth);
                 float dist_noise = UnityEngine.Random.Range(-distance_stdev, distance_stdev);
-                float depthInMm = (linearDepth + dist_noise) * 100.0f;
+                float depthInMm = (linearDepth) * 100.0f;
                 // depthInMm = linearDepth * 100.0f;
 
                 // if (y == depthTex2D.height / 2 && x == depthTex2D.width / 2)
