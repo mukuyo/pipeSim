@@ -14,15 +14,21 @@ public class PipeCapture : MonoBehaviour
     private float[,] pixel_stdev;
     private const int width = 640; // Width for texture
     private const int height = 480; // Height for texture
+
     // private float dist_a = 0.0009667970390564464f;
     // private float dist_b = 0.2767966038314638f;
+    
+    // Azure Linear Model
+    private float dist_a = 0.000855841581479666f;
+    private float dist_b = 9.534853565174028e-05f;
 
-    private float dist_a = 0.0016241095577658135f;
-    private float dist_b = 0.17552242127996232f;
+    // D515 Polynomial Model
+    // private float dist_a = 0.0016241095577658135f;
+    // private float dist_b = 0.17552242127996232f;
 
     // private float dist_a = 0.043464f;
     // private float dist_b = 0.263680f;
-    private string save_folder = "/home/th/ws/research/PipeIsoGen/data/sim/images/test"; // 修正
+    private string save_folder = "/home/th/ws/research/PipeIsoGen/data/sim/test"; // 修正
 
     // Directly specify intrinsic parameters
     private readonly float[] cam_K = new float[]
@@ -92,6 +98,7 @@ public class PipeCapture : MonoBehaviour
         // Calculate the Unity camera projection matrix
         float near = cam.nearClipPlane;
         float far = cam.farClipPlane;
+        Debug.Log($"Near: {near}, Far: {far}");
 
         Matrix4x4 projMatrix = new Matrix4x4();
         projMatrix[0, 0] = 2.0f * cam_K[0] / width;
@@ -128,13 +135,13 @@ public class PipeCapture : MonoBehaviour
                 float linearDepth = cam.farClipPlane * cam.nearClipPlane / 
                                     (cam.farClipPlane - (cam.farClipPlane - cam.nearClipPlane) * depth);
                 
-                float distance_stdev = dist_a * Mathf.Exp(dist_b * linearDepth);
+                // float distance_stdev = dist_a * Mathf.Exp(dist_b * linearDepth);
+                float distance_stdev = dist_a * linearDepth + dist_b;
                 float dist_noise = UnityEngine.Random.Range(-distance_stdev, distance_stdev);
-                float depthInMm = (linearDepth) * 100.0f;
-                // depthInMm = linearDepth * 100.0f;
+                float depthInMm = (linearDepth+dist_noise) * 100.0f;
 
-                // if (y == depthTex2D.height / 2 && x == depthTex2D.width / 2)
-                //     Debug.Log($"Depth in mm: {depthInMm}");
+                if (y == depthTex2D.height / 2 && x == depthTex2D.width / 2)
+                    Debug.Log($"Depth in mm: {depthInMm}");
 
                 ushort depthInUShort = (ushort)Mathf.Clamp(depthInMm, 0, ushort.MaxValue);
                 
